@@ -1,0 +1,15 @@
+{
+    "name": "synapse-periphery",
+    "devDependencies": {
+        "dotenv": "^16.4.5",
+        "prettier-plugin-solidity": "^1.4.1",
+        "solhint": "^5.0.1",
+        "solhint-plugin-prettier": "^0.1.0"
+    },
+    "dependencies": {
+        "@openzeppelin/contracts": "^5.0.2",
+        "@openzeppelin/contracts-upgradeable": "^5.0.2",
+        "@openzeppelin/upgrades-core": "^1.40.0",
+        "@synaps3/types": "^1.0.8"
+    }
+}
