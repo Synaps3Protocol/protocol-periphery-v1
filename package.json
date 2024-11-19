@@ -7,9 +7,13 @@
         "solhint-plugin-prettier": "^0.1.0"
     },
     "dependencies": {
+        "@account-abstraction/contracts": "^0.7.0",
+        "@account-kit/infra": "^4.4.1",
         "@openzeppelin/contracts": "^5.0.2",
         "@openzeppelin/contracts-upgradeable": "^5.0.2",
         "@openzeppelin/upgrades-core": "^1.40.0",
-        "@synaps3/types": "^1.0.8"
+        "@synaps3/types": "^1.0.8",
+        "alchemy-sdk": "^3.5.0",
+        "ethers": "^6.13.4"
     }
 }

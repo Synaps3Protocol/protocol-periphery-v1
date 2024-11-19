@@ -1,7 +1,7 @@
-@ethereum-attestation-service/=node_modules/@ethereum-attestation-service/
-@ethsign/=node_modules/@ethsign/
+@account-abstraction/=node_modules/@account-abstraction/
 @openzeppelin/=node_modules/@openzeppelin/
 @synaps3/=node_modules/@synaps3/types/contracts/core
+@uniswap/=node_modules/@uniswap/
+base64-sol/=node_modules/base64-sol/
 forge-std/=lib/forge-std/src/
-hardhat/=node_modules/hardhat/
 solady/=lib/solady/src/

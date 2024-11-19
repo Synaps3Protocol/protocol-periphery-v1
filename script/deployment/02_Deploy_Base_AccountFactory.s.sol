@@ -7,22 +7,11 @@ import { ERC4337Factory } from "solady/accounts/ERC4337Factory.sol";
 
 contract DeployAccountFactory is DeployBase {
     function run() external returns (address factory) {
-
         vm.startBroadcast(getAdminPK());
-        bytes32 salt = getSalt("SALT_ACCOUNT_FACTORY");
-        bytes32 impSalt = getSalt("SALT_ACCOUNT_IMPL");
+        address impl = computeCreate3Address("SALT_ACCOUNT_IMPL");
         bytes memory bytecode = type(ERC4337Factory).creationCode;
-        bytes memory implBytecode = type(SmartAccounts).creationCode;
-        address impl = vm.computeCreate2Address(impSalt, implBytecode, address(this));
-
-
-        assembly {
-            factory := create2(0, add(bytecode, 32), mload(bytecode), salt)
-            if iszero(extcodesize(factory)) {
-                revert(0, 0)
-            }
-        }
-        
+        bytes memory initCode = abi.encodePacked(bytecode, abi.encode(impl));
+        factory = deploy(initCode, "SALT_ACCOUNT_FACTORY");
         vm.stopBroadcast();
         _logAddress("ACCOUNT_FACTORY", factory);
         return factory;

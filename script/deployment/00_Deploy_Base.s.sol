@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import "forge-std/Script.sol";
 import { Strings } from "@openzeppelin/contracts/utils/Strings.sol";
 import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { CREATE3Factory, ICREATE3Factory } from "script/create3/CREATE3Factory.sol";
+import { ICREATE3Factory } from "script/create3/ICREATE3Factory.sol";
 
 // https://github.com/ZeframLou/create3-factory/tree/main
 // A CREATE3 factory offers the best solution: the address of the deployed contract
