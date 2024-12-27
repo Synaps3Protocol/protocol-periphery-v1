@@ -20,7 +20,8 @@ contract OpsCreateOp is Script {
         address paymaster = vm.envAddress("PAYMASTER");
         address sender = vm.envAddress("SMART_WALLET");
         address entrypoint = vm.envAddress("ENTRYPOINT");
-
+        
+        // https://eips.ethereum.org/EIPS/eip-4337
         uint128 callGas = 300000; // The amount of gas to allocate the main execution call
         uint128 verificationGas = 60000; // The amount of gas to allocate for the verification step
         uint128 maxPriorityFee = 40000000000; // Maximum priority fee per gas (similar to EIP-1559 max_priority_fee_per_gas)

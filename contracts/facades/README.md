@@ -1,66 +1,64 @@
-# Facades
+# Facades Module
 
-Facades represent specific logic within the system that directly interacts with the core. They serve as an abstraction layer, simplifying the complexity of protocol interactions and making them more accessible for users or external systems.
+## Overview
 
-## Characteristics
+The **Facades Module** provides simplified and unified interfaces for interacting with the Synapse Protocol's Core. Facades streamline complex workflows and reduce the need for direct interaction with multiple Core contracts, making it easier for developers and external systems to integrate with the protocol.
 
-- **Derived from the protocol**: Facades interact directly with the core logic without redefining it, offering a simplified interface.
-- **Abstract complexity**: They encapsulate actions or multi-step processes into cohesive methods, whether for simple operations or more comprehensive workflows.
-- **High-level and unified**: Facades provide a streamlined interface that hides intricate details of the protocol’s core components.
-- **Modular and reusable**: Built to be reusable across the system, facades leverage existing core functionalities while maintaining consistency.
-- **Adaptable**: Designed to address both specific actions and broader processes, facades align with practical, real-world use cases.
-- **Intuitive interactions**: They simplify interactions by abstracting multiple dependencies, reducing the need for users to understand underlying complexities.
+Facades act as "orchestrators" that bundle related operations into a single point of access, improving usability and reducing the complexity of multi-step processes.
 
 ---
 
-## Examples of Facades
+## Purpose of the Facades Module
 
-### **Quick Agreement Creation**
-This facade simplifies the process of creating an agreement by combining the deposit and agreement creation steps into a single, easy-to-use method.
+1. **Simplify Complex Workflows:**
+   - Consolidates multi-step operations into single, easy-to-use functions.
 
-```solidity
-/// @notice Combines deposit and agreement creation in a single operation.
-function createQuickAgreement(
-    uint256 amount,
-    address currency,
-    address broker,
-    address[] calldata parties,
-    bytes calldata payload
-) external returns (uint256) {
-    // deposit funds into the vault
-    uint256 depositedAmount = vault.deposit(msg.sender, amount, currency);
-    // immediately create an agreement
-    uint256 proof = agreementManager.createAgreement(depositedAmount, currency, broker, parties, payload);
+2. **Unified Interfaces:**
+   - Provides a single entry point for interacting with multiple Core contracts or processes.
 
-    return proof;
-}
+3. **Enhance Usability:**
+   - Reduces the need for users or developers to manage the details of Core contract interactions.
 
-```
-### **Policy Registration Workflow**
-This facade simplifies the process of creating an agreement by combining the deposit and agreement creation steps into a single, easy-to-use method.
+4. **Maintain Protocol Integrity:**
+   - Delegates execution to Core contracts while ensuring that all operations comply with the protocol's rules and logic.
 
-``` solidity
-/// @notice Simplifies policy registration by chaining agreement creation and policy registration steps.
-function registerPolicyAgreement(
-    uint256 amount,
-    address holder,
-    address policyAddress,
-    address[] calldata parties,
-    bytes calldata payload
-) public returns (uint256) {
-    address currency = address(MMC);
-    address broker = address(RIGHTS_POLICY_MANAGER);
-    // Step 1: Deposit the required amount into the Vault
-    uint256 confirmedAmount = vault.deposit(msg.sender, amount, currency);
-    // Step 2: Create the agreement using the confirmed deposit
-    uint256 agreementProof = rightsAgreement.createAgreement(
-        confirmedAmount,
-        currency,
-        broker,
-        parties,
-        payload
-    );
-    // Step 3: Register the policy using the created agreement
-    return rightsPolicyManager.registerPolicy(agreementProof, holder, policyAddress);
-}
-```
+---
+
+## Key Features
+
+- **Workflow Orchestration:**
+   - Combines related operations (e.g., policy registration, access management, and financial transactions) into streamlined processes.
+
+- **Core Interaction Abstraction:**
+   - Hides the complexity of interacting with multiple Core components, exposing only the necessary functionality.
+
+- **Flexibility and Extensibility:**
+   - Allows new workflows to be added as Facades without modifying the Core.
+
+- **Security Compliance:**
+   - Ensures all interactions adhere to Core-defined rules and permissions.
+
+---
+
+## Use Cases
+
+1. **Access and Policy Management:**
+   - Example: A `PolicyFacade` that handles creating, registering, and validating policies in a single transaction.
+
+2. **Agreement Orchestration:**
+   - Example: An `AgreementFacade` that facilitates creating agreements, distributing rewards, and registering attestations in one operation.
+
+3. **Multi-Contract Workflows:**
+   - Example: A `FinancialFacade` that interacts with multiple financial Core contracts for payment processing.
+
+---
+
+## Directory Structure
+
+```plaintext
+facades/
+├── PolicyWorkflow.sol      # Manages policy creation and registration
+├── AccessWorkflow.sol      # Orchestrates agreement workflows
+├── FinancialWorkflow.sol   # Handles financial operations
+├── BaseWorkflow.sol        # Shared logic for all facades
+└── README.md               # Documentation for the Facades Module
