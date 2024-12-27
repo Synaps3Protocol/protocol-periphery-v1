@@ -2,15 +2,15 @@
 
 ## Overview
 
-The **Aggregators Module** provides a unified interface for accessing and consolidating data from multiple sources within the Synapse Protocol. This module simplifies complex queries by combining data from various core components, offering developers and external systems a single point of interaction for retrieving protocol-wide information.
+The **Aggregation Module** provides a unified interface for accessing and consolidating data from multiple sources within the Synapse Protocol. This module simplifies complex queries by combining data from various core components, offering developers and external systems a single point of interaction for retrieving protocol-wide information.
 
 Aggregators focus solely on **read operations**, enabling efficient data retrieval without modifying the state of the protocol. By centralizing data aggregation, the module reduces complexity and enhances the user experience.
 
 ---
 
-## Purpose of Aggregators
+## Purpose of Aggregation
 
-The Aggregators Module is designed to:
+The Aggregation Module is designed to:
 1. **Simplify Data Access:**
    - Provide a single entry point for queries that require data from multiple sources or components.
    - Abstract the complexity of interacting with various contracts.
@@ -63,7 +63,7 @@ The Aggregators Module is designed to:
 
 ```plaintext
 aggregators/
-├── AccessAggregator.sol          # Aggregates policies, attestations, and access rights
-├── PolicyAggregator.sol          # Focused on consolidating policy-related data
-├── MetricsAggregator.sol         # Aggregates protocol-wide metrics and statistics
+├── AccessAgg.sol          # Aggregates policies, attestations, and access rights
+├── PolicyAgg.sol          # Focused on consolidating policy-related data
+├── MetricsAgg.sol         # Aggregates protocol-wide metrics and statistics
 └── README.md                     # Documentation for the Aggregators Module
