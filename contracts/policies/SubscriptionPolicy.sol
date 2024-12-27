@@ -74,7 +74,7 @@ contract SubscriptionPolicy is BasePolicy {
         return _commit(holder, agreement, subExpire);
     }
 
-    /// @notice Verifies if a specific account has access holder's content.
+    /// @notice Verifies if an account has access to holder's content or asset id.
     function isAccessAllowed(address account, bytes calldata criteria) external view returns (bool) {
         // Default behavior: only check attestation compliance.
         if (_isHolderAddress(criteria)) {
@@ -88,9 +88,11 @@ contract SubscriptionPolicy is BasePolicy {
         return isCompliant(account, getHolder(assetId));
     }
 
-    /// @notice Retrieves the terms associated with a specific criteria.
+    /// @notice Retrieves the terms associated with a specific criteria and policy.
     function resolveTerms(bytes calldata criteria) external view returns (T.Terms memory) {
         // this policy only support holder address criteria
+        // the terms are handled in the holder's content's context
+        // cannot process individual asset id terms
         if (!_isHolderAddress(criteria)) {
             revert InvalidNotSupportedOperation();
         }

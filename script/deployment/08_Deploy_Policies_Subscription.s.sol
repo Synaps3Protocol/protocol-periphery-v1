@@ -8,16 +8,16 @@ contract DeploySubscriptionPolicy is DeployBase {
     function run() external returns (address) {
         vm.startBroadcast(getAdminPK());
 
-        address rightsPolicyManager = computeCreate3Address("SALT_RIGHT_POLICY_MANAGER");
-        address assetOwnership = computeCreate3Address("SALT_ASSET_OWNERSHIP");
+        address assetOwnership = vm.envAddress("ASSET_OWNERSHIP");
         address easAddress = computeCreate3Address("SALT_ATTESTATION_EAS");
+        address rightsPolicyManager = vm.envAddress("RIGHT_POLICY_MANAGER");
 
         bytes memory creationCode = type(SubscriptionPolicy).creationCode;
         bytes memory initCode = abi.encodePacked(
             creationCode,
             abi.encode(rightsPolicyManager, assetOwnership, easAddress)
         );
-        
+
         address policy = deploy(initCode, "SALT_SUBSCRIPTION_POLICY");
         vm.stopBroadcast();
 

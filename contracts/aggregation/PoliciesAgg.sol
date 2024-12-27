@@ -43,19 +43,17 @@ contract PoliciesAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradea
         __AccessControlled_init(accessManager);
     }
 
-    /// @notice Retrieves all policies associated with a holder.
-    /// @param holder Address of the rights holder.
-    /// @return Array of `PolicyTerms` containing policies and their associated terms.
-    function getPoliciesByHolder(address holder) external view returns (PolicyTerms[] memory) {
+    /// @notice Retrieves all policies that apply to the entirety of a holder's content.
+    /// @param holder The address of the rights holder whose policies are being queried.
+    function getHolderWidePolicies(address holder) external view returns (PolicyTerms[] memory) {
         bytes memory criteria = abi.encode(holder);
         PolicyTerms[] memory policies = getAvailablePoliciesTerms(holder, criteria);
         return policies;
     }
 
-    /// @notice Retrieves all policies associated with a specific asset ID.
-    /// @param assetId The ID of the asset.
-    /// @return Array of `PolicyTerms` containing policies and their associated terms.
-    function getPoliciesByAsset(uint256 assetId) external view returns (PolicyTerms[] memory) {
+    /// @notice Retrieves all policies that govern operations on a specific asset.
+    /// @param assetId The unique identifier of the asset whose policies are being queried.
+    function getAssetSpecificPolicies(uint256 assetId) external view returns (PolicyTerms[] memory) {
         bytes memory criteria = abi.encode(assetId);
         address holder = ASSET_OWNERSHIP.ownerOf(assetId);
         PolicyTerms[] memory policies = getAvailablePoliciesTerms(holder, criteria);
@@ -73,7 +71,7 @@ contract PoliciesAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradea
         PolicyTerms[] memory terms = new PolicyTerms[](policies.length);
         uint256 availablePoliciesLen = policies.length;
 
-        for (uint256 i; i < availablePoliciesLen; i = i.uncheckedInc()) {
+        for (uint256 i = 0; i < availablePoliciesLen; i = i.uncheckedInc()) {
             address policyAddress = policies[i];
             bytes memory callData = abi.encodeCall(IPolicy.resolveTerms, (criteria));
             (bool success, bytes memory result) = policyAddress.staticcall(callData);
