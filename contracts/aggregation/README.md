@@ -1,4 +1,4 @@
-# Aggregators Module
+# Aggregation Module
 
 ## Overview
 
