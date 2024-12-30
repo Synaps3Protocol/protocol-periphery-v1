@@ -39,6 +39,9 @@ contract SignGlobal is IAttestationProvider {
         uint256 expireAt,
         bytes calldata data
     ) external returns (uint256[] memory) {
+        require(recipients.length > 0, "No recipients provided");
+        require(expireAt > block.timestamp, "Expiration time must be in the future");
+
         Attestation memory a = Attestation({
             schemaId: SCHEMA_ID,
             attester: address(this),

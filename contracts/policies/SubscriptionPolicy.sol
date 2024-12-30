@@ -44,7 +44,6 @@ contract SubscriptionPolicy is BasePolicy {
     //  return hook.exec(criteria)
     //}
 
-
     function initialize(address holder, bytes calldata init) external onlyPolicyAuthorizer initializer {
         (uint256 price, address currency) = abi.decode(init, (uint256, address));
         if (price == 0) revert InvalidInitialization("Invalid subscription price.");
