@@ -1,9 +1,9 @@
 
-# Periphery for Synapse Protocol
+# Synapse Protocol Periphery 
 
 ## Overview
 
-The **Periphery Module** in Synapse Protocol serves as a critical extension layer that complements the core functionality of the system. While the **Core Module** focuses on the fundamental logic, rules, and security of the protocol, the Periphery is designed to implement specific dependencies, enhance interactions, and provide modular scalability without compromising the integrity of the core.
+The **Periphery** in Synapse Protocol serves as a critical extension layer that complements the core functionality of the system. While the **Core Module** focuses on the fundamental logic, rules, and security of the protocol, the Periphery is designed to implement specific dependencies, enhance interactions, and provide modular scalability without compromising the integrity of the core.
 
 The Periphery is not a proxy or intermediary; rather, it acts as a dynamic and adaptable framework for extending the capabilities of the core.
 
@@ -20,9 +20,6 @@ Peripheral
 ```
 
 
-
----
-
 ## Concept and Role
 
 The Periphery operates on three foundational principles:
@@ -35,31 +32,6 @@ The Periphery operates on three foundational principles:
 
 3. **Extensibility**  
    By maintaining a clear separation of concerns, the Periphery enables seamless integration of new features, external services, and advanced functionalities like account abstraction. This design ensures that the protocol remains flexible and future-proof.
-
----
-
-## Components of the Periphery
-
-The Periphery encompasses several key areas that enhance the protocol's capabilities:
-
-- **Policies**  
-   Specialized logic to validate access and interactions within the protocol.
-   
-- **Attestations**  
-   Mechanisms for proving and certifying specific conditions or properties required by policies.
-
-- **Hooks**  
-   Extensible points for executing custom logic during key interactions in the protocol.
-
-- **Query Aggregation**  
-   Utilities that combine multiple core interactions into simplified queries.
-
-- **Account Abstraction**  
-   Support for advanced account models, enabling features like signature validation and multisig compatibility.
-
-- **External Integrations**  
-   Modules for connecting the protocol to oracles, payment systems, and other external services.
-
 
 ## Why the Periphery Matters
 
