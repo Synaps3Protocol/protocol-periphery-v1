@@ -2,11 +2,13 @@
 pragma solidity 0.8.26;
 
 import { BasePolicy } from "@synaps3/core/primitives/BasePolicy.sol";
+import { LoopOps } from "@synaps3/core/libraries/LoopOps.sol";
 import { T } from "@synaps3/core/primitives/Types.sol";
 
 /// @title SubscriptionPolicy
 /// @notice Implements a subscription-based content access policy.
 contract SubscriptionPolicy is BasePolicy {
+    using LoopOps for uint256;
     /// @dev Structure to define a subscription package.
     struct Package {
         uint256 pricePerDay;
@@ -15,6 +17,8 @@ contract SubscriptionPolicy is BasePolicy {
 
     // Mapping from content holder (address) to their subscription package details.
     mapping(address => Package) private _packages;
+    /// @dev registry to store the relation between holder & account = attestation
+    mapping(address => mapping(address => uint256)) private _attestations;
 
     constructor(
         address rightPolicyManagerAddress,
@@ -38,7 +42,9 @@ contract SubscriptionPolicy is BasePolicy {
     }
 
     // TODOpotential improvement to scaling custom actions in protocol using hooks
+    // eg: access handling, gating content
     // function isAccessAllowed(bytes calldata criteria) external view return (bool) {
+    //  // get registered access hooks for this contract 
     //  IHook hook = HOOKS.get(address(this), IAccessHook) <- internal handling of any logic needed to get the valid hook
     //  if (!hook) return false // need conf hook
     //  return hook.exec(criteria)
@@ -70,7 +76,9 @@ contract SubscriptionPolicy is BasePolicy {
         uint256 duration = _verifyDaysFromAmount(paidAmount, pricePerDay, partiesLen);
         // subscribe to content owner's catalog (content package)
         uint256 subExpire = block.timestamp + (duration * 1 days);
-        return _commit(holder, agreement, subExpire);
+        uint256[] memory attestationIds = _commit(holder, agreement, subExpire);
+        _updateBatchAttestation(holder, attestationIds, agreement.parties);
+        return attestationIds;
     }
 
     /// @notice Verifies if an account has access to holder's content or asset id.
@@ -79,12 +87,14 @@ contract SubscriptionPolicy is BasePolicy {
         if (_isHolderAddress(criteria)) {
             // match the holder
             address holder = abi.decode(criteria, (address));
-            return isCompliant(account, holder);
+            return _isCompliant(account, holder);
         }
 
         // validate access on asset id criteria
         uint256 assetId = abi.decode(criteria, (uint256));
-        return isCompliant(account, getHolder(assetId));
+        // TODO using bounded we can determinate if an asset is excluded for subscription plan?
+        // eg: asset.terms().isAllowedSubscription
+        return _isCompliant(account, getHolder(assetId));
     }
 
     /// @notice Retrieves the terms associated with a specific criteria and policy.
@@ -101,6 +111,28 @@ contract SubscriptionPolicy is BasePolicy {
         return T.Terms(pkg.pricePerDay, pkg.currency, T.RateBasis.DAILY, "ipfs://");
     }
 
+    /// @notice Retrieves the attestation id associated with a specific account.
+    /// @param account The address of the account for which the attestation is being retrieved.
+    /// @param criteria Encoded data containing the parameters required to retrieve attestation.
+    function getAttestation(address account, bytes calldata criteria) external view returns (uint256) {
+          if (!_isHolderAddress(criteria)) {
+            revert InvalidNotSupportedOperation();
+        }
+
+        address holder = abi.decode(criteria, (address));
+        return _attestations[account][holder];
+    }
+
+    /// @notice Verifies whether the on-chain access terms are satisfied for an account.
+    /// @dev The function checks if the provided account complies with the attestation.
+    /// @param account The address of the user whose access is being verified.
+    function _isCompliant(address account, address holder) public view returns (bool) {
+        uint256 attestationId = _attestations[account][holder];
+        // default uint256 attestation is zero <- means not registered
+        if (attestationId == 0) return false; // false if not registered
+        return ATTESTATION_PROVIDER.verify(attestationId, account);
+    }
+
     function _verifyDaysFromAmount(
         uint256 amount,
         uint256 pricePerDay,
@@ -114,6 +146,21 @@ contract SubscriptionPolicy is BasePolicy {
         uint256 total = (subscriptionDuration * pricePerDay) * partiesLen;
         if (amount < total) revert InvalidEnforcement("Insufficient funds for subscription");
         return subscriptionDuration;
+    }
+
+    /// @notice Updates the attestation records for each account.
+    /// @param attestationIds The ID of the attestations.
+    /// @param parties The list of account to assign attestation id.
+    function _updateBatchAttestation(
+        address holder,
+        uint256[] memory attestationIds,
+        address[] memory parties
+    ) private {
+        uint256 partiesLen = parties.length;
+        for (uint256 i = 0; i < partiesLen; i = i.uncheckedInc()) {
+            _attestations[parties[i]][holder] = attestationIds[i];
+            emit AttestedAgreement(holder, parties[i], attestationIds[i]);
+        }
     }
 
     function _isHolderAddress(bytes calldata criteria) private pure returns (bool) {
