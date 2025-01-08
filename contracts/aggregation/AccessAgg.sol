@@ -6,7 +6,6 @@ import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils
 
 import { AccessControlledUpgradeable } from "@synaps3/core/primitives/upgradeable/AccessControlledUpgradeable.sol";
 import { IRightsPolicyManager } from "@synaps3/core/interfaces/rights/IRightsPolicyManager.sol";
-import { IPolicy } from "@synaps3/core/interfaces/policies/IPolicy.sol";
 
 contract AccessAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradeable {
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
@@ -28,11 +27,12 @@ contract AccessAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradeabl
         __AccessControlled_init(accessManager);
     }
 
+    // TODO
     // function getRegisteredLicenseByAsset(address account, uint256 assetId) external view returns (uint256) {
     //     bytes memory criteria = abi.encode(assetId);
     //     (bool active, address policy) = RIGHTS_POLICY_MANAGER.getActivePolicy(account, criteria);
     //     return IPolicy(policy).getAttestation(account, criteria);
-    // } 
+    // }
 
     /// @notice Checks if an account has access rights based on a holder's criteria.
     /// @param account Address of the account to verify.
