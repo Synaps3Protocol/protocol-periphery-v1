@@ -7,10 +7,14 @@ import { LedgerUpgradeable } from "@synaps3/core/primitives/upgradeable/LedgerUp
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
 import { AccessControlledUpgradeable } from "@synaps3/core/primitives/upgradeable/AccessControlledUpgradeable.sol";
 
+import { IPolicy } from "@synaps3/core/interfaces/policies/IPolicy.sol";
 import { ILedgerVault } from "@synaps3/core/interfaces/financial/ILedgerVault.sol";
 import { FinancialOps } from "@synaps3/core/libraries/FinancialOps.sol";
 import { ICampaign } from "contracts/interfaces/ICampaign.sol";
 
+/// @title BaseCampaign
+/// @notice Abstract contract for managing campaigns, including funds allocation, access control, and policy enforcement.
+/// @dev Supports upgradeable contracts and integrates with Ledger and Access control modules.
 abstract contract BaseCampaign is
     Initializable,
     UUPSUpgradeable,
@@ -23,7 +27,7 @@ abstract contract BaseCampaign is
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable MMC;
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    address public immutable POLICY;
+    IPolicy public immutable POLICY;
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     ILedgerVault public immutable LEDGER_VAULT;
 
@@ -44,6 +48,17 @@ abstract contract BaseCampaign is
     /// @param amount The amount of funds removed.
     event FundsRemoved(address account, uint256 amount);
 
+    /// @notice Emitted when the maximum rate limit is set for an account.
+    /// @param account The account whose rate limit was set.
+    /// @param limit The new maximum rate limit.
+    event MaxRateLimitSet(address indexed account, uint256 limit);
+
+    /// @notice Emitted when funds are allocated to a broker for a campaign.
+    /// @param account The account allocating the funds.
+    /// @param broker The broker authorized to use the allocated funds.
+    /// @param amount The amount of funds allocated.
+    event PolicyAllocationSet(address indexed account, address indexed broker, uint256 amount);
+
     /// @notice Emitted when a campaign `run` is executed.
     /// @param sponsor The account sponsoring the campaign.
     /// @param account The account receiving sponsored access.
@@ -55,9 +70,12 @@ abstract contract BaseCampaign is
         /// Ensures the contract is properly initialized and prevents re-initialization.
         _disableInitializers();
         LEDGER_VAULT = ILedgerVault(ledgerVault);
-        POLICY = policy; // The policy tied to this campaign.
+        POLICY = IPolicy(policy); // The policy tied to this campaign.
         MMC = mmc;
     }
+
+
+    // TODO isActiveCampaign(address, broker) => if ratio content >0 & allocated > 0 
 
     /// @notice Sets the maximum rate limit for an account within the campaign.
     /// @dev The rate limit determines the maximum number of accesses an account can sponsor.
@@ -65,6 +83,14 @@ abstract contract BaseCampaign is
     function setMaxRateLimit(uint256 limit) external virtual {
         require(limit > 0, "Rate limit must be greater than zero.");
         _setRateLimit(msg.sender, limit);
+        emit MaxRateLimitSet(msg.sender, limit);
+    }
+
+    /// @notice Retrieves the maximum rate limit for a specific account.
+    /// @param account The account whose maximum rate limit is being queried.
+    /// @return The maximum rate limit for the specified account.
+    function getMaxRateLimit(address account) external view returns (uint256) {
+        return _getRateLimit(account);
     }
 
     /// @notice Allocates a specific amount of funds to a broker for the campaign.
@@ -76,6 +102,7 @@ abstract contract BaseCampaign is
         require(amount > 0, "Invalid zero funds allocation.");
         require(getLedgerBalance(msg.sender, MMC) >= amount, "Insufficient funds in campaign to allocate.");
         _setAllocation(msg.sender, broker, amount);
+        emit PolicyAllocationSet(msg.sender, broker, amount);
     }
 
     /// @notice Retrieves the allocated funds for a specific broker.
@@ -91,6 +118,13 @@ abstract contract BaseCampaign is
     /// @return The current value of the sponsored access counter for the account.
     function getRateCounter(address account) external view virtual returns (uint256) {
         return _getRateCounter(account);
+    }
+
+    /// @notice Retrieves the current balance of funds for a specific account in the campaign.
+    /// @param account The account whose funds balance is being queried.
+    /// @return The current funds balance of the specified account.
+    function getFundsBalance(address account) external view returns (uint256) {
+        return getLedgerBalance(account, MMC);
     }
 
     /// @notice Adds funds to the campaign's balance.
@@ -138,11 +172,26 @@ abstract contract BaseCampaign is
         return policyAllocatedAmount;
     }
 
+    /// @dev Retrieves the allocation for an account and broker.
+    /// @param account The account to retrieve the allocation for.
+    /// @param broker The broker managing the allocation.
+    /// @return The allocated funds for the broker.
+    function _getAllocation(address account, address broker) internal view returns (uint256) {
+        return _allocation[account][broker];
+    }
+
     /// @dev Retrieves the current rate counter for an account.
     /// @param account The account to retrieve the counter for.
     /// @return The current value of the access counter.
-    function _getRateCounter(address account) private view returns (uint256) {
+    function _getRateCounter(address account) internal view returns (uint256) {
         return _rateCounter[account];
+    }
+
+    /// @dev Retrieves the rate limit for an account.
+    /// @param account The account to retrieve the rate limit for.
+    /// @return The rate limit value.
+    function _getRateLimit(address account) internal view returns (uint256) {
+        return _rateLimits[account];
     }
 
     /// @dev Updates the rate counter for an account.
@@ -152,26 +201,11 @@ abstract contract BaseCampaign is
         _rateCounter[account] = value;
     }
 
-    /// @dev Retrieves the rate limit for an account.
-    /// @param account The account to retrieve the rate limit for.
-    /// @return The rate limit value.
-    function _getRateLimit(address account) private view returns (uint256) {
-        return _rateLimits[account];
-    }
-
     /// @dev Updates the rate limit for an account.
     /// @param account The account to update the rate limit for.
     /// @param limit The new rate limit value.
     function _setRateLimit(address account, uint256 limit) private {
         _rateLimits[account] = limit;
-    }
-
-    /// @dev Retrieves the allocation for an account and broker.
-    /// @param account The account to retrieve the allocation for.
-    /// @param broker The broker managing the allocation.
-    /// @return The allocated funds for the broker.
-    function _getAllocation(address account, address broker) private view returns (uint256) {
-        return _allocation[account][broker];
     }
 
     /// @dev Updates the allocation for an account and broker.

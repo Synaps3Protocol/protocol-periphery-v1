@@ -3,55 +3,110 @@ pragma solidity 0.8.26;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-
 import { AccessControlledUpgradeable } from "@synaps3/core/primitives/upgradeable/AccessControlledUpgradeable.sol";
-import { IRightsPolicyManager } from "@synaps3/core/interfaces/rights/IRightsPolicyManager.sol";
 
+import { IRightsPolicyManager } from "@synaps3/core/interfaces/rights/IRightsPolicyManager.sol";
+import { IPolicy } from "@synaps3/core/interfaces/policies/IPolicy.sol";
+import { LoopOps } from "@synaps3/core/libraries/LoopOps.sol";
+
+/// @title Access Aggregator
+/// @notice This contract aggregates access control logic for licenses and policies.
+/// @dev Uses UUPS upgradeable proxy pattern and centralized access control.
 contract AccessAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradeable {
+    using LoopOps for uint256;
+
+    /// @notice Data structure representing the relationship between a policy and its associated license.
+    struct PolicyLicense {
+        address policy; // Address of the policy contract
+        uint256 license; // License ID corresponding to the policy
+    }
+
+    /// @notice Address of the Rights Policy Manager contract.
+    /// @dev This variable is immutable and set at deployment time.
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IRightsPolicyManager public immutable RIGHTS_POLICY_MANAGER;
 
+    /// @notice Constructor to initialize the immutable Rights Policy Manager.
+    /// @dev Disables initializers to ensure proper proxy usage.
+    /// @param rightsPolicyManager Address of the Rights Policy Manager contract.
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address rightsPolicyManager) {
-        /// https://forum.openzeppelin.com/t/uupsupgradeable-vulnerability-post-mortem/15680
-        /// https://forum.openzeppelin.com/t/what-does-disableinitializers-function-mean/28730/5
         _disableInitializers();
         RIGHTS_POLICY_MANAGER = IRightsPolicyManager(rightsPolicyManager);
     }
 
     /// @notice Initializes the proxy state.
-    /// @dev Sets up the contract for usage.
+    /// @dev Sets up the contract for usage and ensures AccessManager is properly set.
     /// @param accessManager Address of the Access Manager contract used for permission handling.
     function initialize(address accessManager) public initializer {
         __UUPSUpgradeable_init();
         __AccessControlled_init(accessManager);
     }
 
-    // TODO
-    // function getRegisteredLicenseByAsset(address account, uint256 assetId) external view returns (uint256) {
-    //     bytes memory criteria = abi.encode(assetId);
-    //     (bool active, address policy) = RIGHTS_POLICY_MANAGER.getActivePolicy(account, criteria);
-    //     return IPolicy(policy).getAttestation(account, criteria);
-    // }
+    /// @notice Retrieves all active licenses for a given account and asset holder.
+    /// @dev Uses the asset holder address as the criteria for license retrieval.
+    /// @param account The address of the account to check.
+    /// @param holder The address of the rights holder used as the criteria.
+    /// @return An array of PolicyLicense structures.
+    function getActiveLicenses(address account, address holder) external view returns (PolicyLicense[] memory) {
+        bytes memory criteria = abi.encode(holder); // Encode holder address as search criteria
+        return getActivePoliciesLicenses(account, criteria);
+    }
+
+    /// @notice Retrieves all active licenses for a given account and asset ID.
+    /// @dev Uses the asset ID as the criteria for license retrieval.
+    /// @param account The address of the account to check.
+    /// @param assetId The ID of the asset used as the criteria.
+    /// @return An array of PolicyLicense structures.
+    function getActiveLicenses(address account, uint256 assetId) external view returns (PolicyLicense[] memory) {
+        bytes memory criteria = abi.encode(assetId); // Encode asset ID as search criteria
+        return getActivePoliciesLicenses(account, criteria);
+    }
 
     /// @notice Checks if an account has access rights based on a holder's criteria.
-    /// @param account Address of the account to verify.
-    /// @param holder Address of the rights holder used as criteria.
+    /// @dev Uses the holder address as the search criteria.
+    /// @param account The address of the account to verify.
+    /// @param holder The address of the rights holder used as criteria.
     /// @return active True if the account has access; otherwise, false.
-    function isAccessAllowedByHolder(address account, address holder) external view returns (bool) {
-        bytes memory criteria = abi.encode(holder);
-        (bool active, ) = RIGHTS_POLICY_MANAGER.getActivePolicy(account, criteria);
-        return active;
+    /// @return address The address of the active policy.
+    function isAccessAllowed(address account, address holder) public view returns (bool, address) {
+        bytes memory criteria = abi.encode(holder); // Encode holder address as search criteria
+        return RIGHTS_POLICY_MANAGER.getActivePolicy(account, criteria);
     }
 
     /// @notice Checks if an account has access to a specific asset ID.
-    /// @param account Address of the account to verify.
-    /// @param assetId ID of the asset used as criteria.
+    /// @dev Uses the asset ID as the search criteria.
+    /// @param account The address of the account to verify.
+    /// @param assetId The ID of the asset used as criteria.
     /// @return active True if the account has access; otherwise, false.
-    function isAccessAllowedByAsset(address account, uint256 assetId) external view returns (bool) {
-        bytes memory criteria = abi.encode(assetId);
-        (bool active, ) = RIGHTS_POLICY_MANAGER.getActivePolicy(account, criteria);
-        return active;
+    /// @return address The address of the active policy.
+    function isAccessAllowed(address account, uint256 assetId) public view returns (bool, address) {
+        bytes memory criteria = abi.encode(assetId); // Encode asset ID as search criteria
+        return RIGHTS_POLICY_MANAGER.getActivePolicy(account, criteria);
+    }
+
+    /// @notice Retrieves active policies and their corresponding licenses for an account.
+    /// @param account The address of the account to check.
+    /// @param criteria Encoded criteria used to filter active policies.
+    function getActivePoliciesLicenses(
+        address account,
+        bytes memory criteria
+    ) public view returns (PolicyLicense[] memory) {
+        address[] memory policies = RIGHTS_POLICY_MANAGER.getActivePolicies(account, criteria);
+        PolicyLicense[] memory licenses = new PolicyLicense[](policies.length);
+        uint256 policiesLen = policies.length;
+
+        for (uint256 i = 0; i < policiesLen; i = i.uncheckedInc()) {
+            address policyAddress = policies[i]; // address of the policy to fetch terms
+            bytes memory callData = abi.encodeCall(IPolicy.getLicense, (account, criteria));
+            (, bytes memory result) = policyAddress.staticcall(callData); //
+
+            uint256 licenseId = abi.decode(result, (uint256));
+            if (licenseId == 0) continue; // 0 is not a license
+            licenses[i] = PolicyLicense({ policy: policyAddress, license: licenseId });
+        }
+
+        return licenses;
     }
 
     /// @notice Function that should revert when msg.sender is not authorized to upgrade the contract.

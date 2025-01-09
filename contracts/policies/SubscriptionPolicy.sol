@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
+import { SubscriptionOps } from "contracts/libraries/SubscriptionOps.sol";
 import { BasePolicy } from "@synaps3/core/primitives/BasePolicy.sol";
 import { LoopOps } from "@synaps3/core/libraries/LoopOps.sol";
 import { T } from "@synaps3/core/primitives/Types.sol";
@@ -9,6 +10,8 @@ import { T } from "@synaps3/core/primitives/Types.sol";
 /// @notice Implements a subscription-based content access policy.
 contract SubscriptionPolicy is BasePolicy {
     using LoopOps for uint256;
+    using SubscriptionOps for uint256;
+
     /// @dev Structure to define a subscription package.
     struct Package {
         uint256 pricePerDay;
@@ -78,11 +81,12 @@ contract SubscriptionPolicy is BasePolicy {
         uint256 pricePerDay = pkg.pricePerDay;
 
         // verify if the paid amount is valid based on total expected + parties
-        uint256 duration = _verifyDaysFromAmount(paidAmount, pricePerDay, partiesLen);
+        (uint256 duration, uint256 totalToPay) = paidAmount.calcDuration(pricePerDay, partiesLen);
+        if (paidAmount < totalToPay) revert InvalidEnforcement("Insufficient funds for subscription");
+        // calculate the expected duration expire for subscription
         uint256 subExpire = block.timestamp + (duration * 1 days);
         uint256[] memory attestationIds = _commit(holder, agreement, subExpire);
         _updateBatchAttestation(holder, attestationIds, agreement.parties);
-
         // Emit a single event with subscription details
         emit SubscriptionEnforced(holder, pricePerDay, duration);
         return attestationIds;
@@ -126,21 +130,6 @@ contract SubscriptionPolicy is BasePolicy {
         // default uint256 attestation is zero <- means not registered
         if (attestationId == 0) return false; // false if not registered
         return ATTESTATION_PROVIDER.verify(attestationId, account);
-    }
-
-    function _verifyDaysFromAmount(
-        uint256 amount,
-        uint256 pricePerDay,
-        uint256 partiesLen
-    ) private pure returns (uint256) {
-        // we need to be sure the user paid for the total of the package..
-        uint256 paymentPerAccount = amount / partiesLen;
-        // expected payment per day per account
-        uint256 subscriptionDuration = paymentPerAccount / pricePerDay;
-        // total to pay for the total of subscriptions
-        uint256 total = (subscriptionDuration * pricePerDay) * partiesLen;
-        if (amount < total) revert InvalidEnforcement("Insufficient funds for subscription");
-        return subscriptionDuration;
     }
 
     /// @notice Updates the attestation records for each account.

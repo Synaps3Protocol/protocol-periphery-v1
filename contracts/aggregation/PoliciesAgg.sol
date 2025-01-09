@@ -15,16 +15,16 @@ import { T } from "@synaps3/core/primitives/Types.sol";
 contract PoliciesAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradeable {
     using LoopOps for uint256;
 
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    IRightsPolicyAuthorizer public immutable RIGHTS_POLICY_AUTHORIZER;
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    IAssetOwnership public immutable ASSET_OWNERSHIP;
+    
     /// @notice structure to hold the relationship between policy and terms
     struct PolicyTerms {
         address policy;
         T.Terms terms;
     }
-
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IRightsPolicyAuthorizer public immutable RIGHTS_POLICY_AUTHORIZER;
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IAssetOwnership public immutable ASSET_OWNERSHIP;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address rightsPolicyAuthorizer, address assetOwnership) {
@@ -45,19 +45,17 @@ contract PoliciesAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradea
 
     /// @notice Retrieves all policies that apply to the entirety of a holder's content.
     /// @param holder The address of the rights holder whose policies are being queried.
-    function getHolderWidePolicies(address holder) external view returns (PolicyTerms[] memory) {
+    function getPoliciesTerms(address holder) external view returns (PolicyTerms[] memory) {
         bytes memory criteria = abi.encode(holder);
-        PolicyTerms[] memory policies = getAvailablePoliciesTerms(holder, criteria);
-        return policies;
+        return getAvailablePoliciesTerms(holder, criteria);
     }
 
     /// @notice Retrieves all policies that govern operations on a specific asset.
     /// @param assetId The unique identifier of the asset whose policies are being queried.
-    function getAssetSpecificPolicies(uint256 assetId) external view returns (PolicyTerms[] memory) {
+    function getPoliciesTerms(uint256 assetId) external view returns (PolicyTerms[] memory) {
         bytes memory criteria = abi.encode(assetId);
         address holder = ASSET_OWNERSHIP.ownerOf(assetId);
-        PolicyTerms[] memory policies = getAvailablePoliciesTerms(holder, criteria);
-        return policies;
+        return getAvailablePoliciesTerms(holder, criteria);
     }
 
     /// @notice Retrieves all available policies for a holder matching specific criteria.
@@ -72,7 +70,7 @@ contract PoliciesAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradea
         uint256 availablePoliciesLen = policies.length;
 
         for (uint256 i = 0; i < availablePoliciesLen; i = i.uncheckedInc()) {
-            address policyAddress = policies[i];
+            address policyAddress = policies[i]; // the address of the policy to fetch terms
             bytes memory callData = abi.encodeCall(IPolicy.resolveTerms, (criteria));
             (bool success, bytes memory result) = policyAddress.staticcall(callData);
             if (!success) continue; // silent failure

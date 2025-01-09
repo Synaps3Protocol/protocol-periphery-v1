@@ -48,7 +48,7 @@ contract AccessWorkflow is BaseWorkflow {
     /// @notice Creates and registers a new access agreement in a single transaction.
     /// @dev Encapsulates agreement creation and access policy registration into one cohesive workflow.
     /// @param amount The amount of MMC tokens to be used in the agreement.
-    /// @param holder The address of the rights holder.
+    /// @param holder The address of the assets rights holder.
     /// @param policyAddress The address of the policy contract being used.
     /// @param parties An array of addresses representing the parties involved in the agreement.
     /// @param payload Additional data required for the agreement creation.

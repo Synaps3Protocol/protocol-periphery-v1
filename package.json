@@ -14,8 +14,7 @@
         "@openzeppelin/contracts": "^5.0.2",
         "@openzeppelin/contracts-upgradeable": "^5.0.2",
         "@openzeppelin/upgrades-core": "^1.40.0",
-        "@synaps3/protocol": "^1.8.1",
-        "@synaps3/types": "^1.8.0",
+        "@synaps3/types": "^1.9.0",
         "alchemy-sdk": "^3.5.0",
         "ethers": "^6.13.4"
     }
