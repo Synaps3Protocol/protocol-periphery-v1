@@ -13,7 +13,7 @@ import { FinancialOps } from "@synaps3/core/libraries/FinancialOps.sol";
 import { ICampaign } from "contracts/interfaces/ICampaign.sol";
 
 /// @title BaseCampaign
-/// @notice Abstract contract for managing campaigns, including funds allocation, access control, and policy enforcement.
+/// @notice Abstract contract for managing campaigns, including funds allocation, access control.
 /// @dev Supports upgradeable contracts and integrates with Ledger and Access control modules.
 abstract contract BaseCampaign is
     Initializable,
@@ -35,7 +35,7 @@ abstract contract BaseCampaign is
     mapping(address => uint256) private _rateLimits;
     /// @notice Tracks the number of sponsored accesses executed for an account.
     mapping(address => uint256) private _rateCounter;
-    /// @notice Maps an account and a broker to the allocated funds for the campaign.
+    /// @notice Maps an account and an operator to the allocated funds for the campaign.
     mapping(address => mapping(address => uint256)) private _allocation;
 
     /// @notice Emitted when funds are added to a campaign.
@@ -53,11 +53,11 @@ abstract contract BaseCampaign is
     /// @param limit The new maximum rate limit.
     event MaxRateLimitSet(address indexed account, uint256 limit);
 
-    /// @notice Emitted when funds are allocated to a broker for a campaign.
+    /// @notice Emitted when funds are allocated to an operator for a campaign.
     /// @param account The account allocating the funds.
-    /// @param broker The broker authorized to use the allocated funds.
+    /// @param operator The operator authorized to use the allocated funds.
     /// @param amount The amount of funds allocated.
-    event PolicyAllocationSet(address indexed account, address indexed broker, uint256 amount);
+    event PolicyAllocationSet(address indexed account, address indexed operator, uint256 amount);
 
     /// @notice Emitted when a campaign `run` is executed.
     /// @param sponsor The account sponsoring the campaign.
@@ -74,8 +74,16 @@ abstract contract BaseCampaign is
         MMC = mmc;
     }
 
-
-    // TODO isActiveCampaign(address, broker) => if ratio content >0 & allocated > 0 
+    /// @notice Checks if a campaign is active for a specific account and operator.
+    /// @dev A campaign is considered active if:
+    ///      1. The account has a non-zero rate limit (can sponsor accesses).
+    ///      2. There is an allocated amount of funds for the specified operator.
+    /// @param account The address of the account sponsoring the campaign.
+    /// @param operator The address of the operator managing the campaign.
+    /// @return True if the campaign is active for the given account and operator, otherwise false.
+    function isActiveCampaign(address account, address operator) external view returns (bool) {
+        return _getRateLimit(account) > 0 && _getAllocation(account, operator) > 0;
+    }
 
     /// @notice Sets the maximum rate limit for an account within the campaign.
     /// @dev The rate limit determines the maximum number of accesses an account can sponsor.
@@ -93,24 +101,24 @@ abstract contract BaseCampaign is
         return _getRateLimit(account);
     }
 
-    /// @notice Allocates a specific amount of funds to a broker for the campaign.
+    /// @notice Allocates a specific amount of funds to an operator for the campaign.
     /// @dev The allocation represents the funds that can be utilized
-    ///      by the specified broker for each `run` of the campaign.
+    ///      by the specified operator for each `run` of the campaign.
     /// @param amount The amount of funds to allocate per `run`.
-    /// @param broker The broker authorized to operate over the allocated funds.
-    function setPolicyAllocation(uint256 amount, address broker) external virtual {
+    /// @param operator The operator authorized to operate over the allocated funds.
+    function setPolicyAllocation(uint256 amount, address operator) external virtual {
         require(amount > 0, "Invalid zero funds allocation.");
         require(getLedgerBalance(msg.sender, MMC) >= amount, "Insufficient funds in campaign to allocate.");
-        _setAllocation(msg.sender, broker, amount);
-        emit PolicyAllocationSet(msg.sender, broker, amount);
+        _setAllocation(msg.sender, operator, amount);
+        emit PolicyAllocationSet(msg.sender, operator, amount);
     }
 
-    /// @notice Retrieves the allocated funds for a specific broker.
+    /// @notice Retrieves the allocated funds for a specific operator.
     /// @param account The account providing the allocation.
-    /// @param broker The broker managing the allocated funds.
-    /// @return The allocated funds for the specified broker.
-    function getPolicyAllocation(address account, address broker) external view virtual returns (uint256) {
-        return _getAllocation(account, broker);
+    /// @param operator The operator managing the allocated funds.
+    /// @return The allocated funds for the specified operator.
+    function getPolicyAllocation(address account, address operator) external view virtual returns (uint256) {
+        return _getAllocation(account, operator);
     }
 
     /// @notice Retrieves the current rate counter for an account.
@@ -147,7 +155,7 @@ abstract contract BaseCampaign is
 
     /// @notice Executes a campaign run for the implicit policy and a given account.
     /// @dev Ensures proper allocation and rate limits during the execution:
-    ///      1. Verifies the account has a valid allocation set for the broker.
+    ///      1. Verifies the account has a valid allocation set for the operator.
     ///      2. Confirms the account has sufficient funds in the campaign.
     ///      3. Checks that the rate limit for the account has not been exceeded.
     /// @param sponsor The account sponsoring the campaign.
@@ -172,12 +180,12 @@ abstract contract BaseCampaign is
         return policyAllocatedAmount;
     }
 
-    /// @dev Retrieves the allocation for an account and broker.
+    /// @dev Retrieves the allocation for an account and operator.
     /// @param account The account to retrieve the allocation for.
-    /// @param broker The broker managing the allocation.
-    /// @return The allocated funds for the broker.
-    function _getAllocation(address account, address broker) internal view returns (uint256) {
-        return _allocation[account][broker];
+    /// @param operator The operator managing the allocation.
+    /// @return The allocated funds for the operator.
+    function _getAllocation(address account, address operator) internal view returns (uint256) {
+        return _allocation[account][operator];
     }
 
     /// @dev Retrieves the current rate counter for an account.
@@ -208,11 +216,11 @@ abstract contract BaseCampaign is
         _rateLimits[account] = limit;
     }
 
-    /// @dev Updates the allocation for an account and broker.
+    /// @dev Updates the allocation for an account and operator.
     /// @param account The account providing the allocation.
-    /// @param broker The broker managing the allocation.
+    /// @param operator The operator managing the allocation.
     /// @param amount The allocation amount.
-    function _setAllocation(address account, address broker, uint256 amount) private {
-        _allocation[account][broker] = amount;
+    function _setAllocation(address account, address operator, uint256 amount) private {
+        _allocation[account][operator] = amount;
     }
 }

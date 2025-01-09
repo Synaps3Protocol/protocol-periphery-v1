@@ -19,7 +19,7 @@ contract PoliciesAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradea
     IRightsPolicyAuthorizer public immutable RIGHTS_POLICY_AUTHORIZER;
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     IAssetOwnership public immutable ASSET_OWNERSHIP;
-    
+
     /// @notice structure to hold the relationship between policy and terms
     struct PolicyTerms {
         address policy;

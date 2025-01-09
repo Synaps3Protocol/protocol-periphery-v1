@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import { C } from "@synaps3/core/primitives/Constants.sol";
-
 /// @title SubscriptionOps Library
 /// @notice Provides utility functions for subscription-related operations.
-/// @dev This library includes methods to calculate subscription duration and total cost based on payment, price, and the number of parties involved.
+/// @dev This library includes methods to calculate subscription duration and total cost based on payment.
 library SubscriptionOps {
     /// @notice Calculates the subscription duration and total cost based on the provided payment amount.
     /// @dev Ensures that the payment covers the total cost of the subscription package for all parties.
