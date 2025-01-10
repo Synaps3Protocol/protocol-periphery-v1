@@ -7,6 +7,8 @@ The **Periphery** in Synapse Protocol serves as a critical extension layer that 
 
 The Periphery is not a proxy or intermediary; rather, it acts as a dynamic and adaptable framework for extending the capabilities of the core.
 
+![image](https://github.com/user-attachments/assets/307ccfa9-8fee-493d-a289-6f3a3de9bbf2)
+
 ```
 Core Protocol
   ├── Policy Management
