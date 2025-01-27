@@ -3,7 +3,7 @@
 
 ## Overview
 
-The **Periphery** in Synapse Protocol serves as a critical extension layer that complements the core functionality of the system. While the **Core Module** focuses on the fundamental logic, rules, and security of the protocol, the Periphery is designed to implement specific dependencies, enhance interactions, and provide modular scalability without compromising the integrity of the core.
+The **Periphery** in Synapse Protocol serves as a critical extension layer that complements the core functionality of the system. While the **Core Modules** focuses on the fundamental logic, rules, and security of the protocol, the Periphery is designed to implement specific dependencies, enhance interactions, and provide modular scalability without compromising the integrity of the core.
 
 The Periphery is not a proxy or intermediary; rather, it acts as a dynamic and adaptable framework for extending the capabilities of the core.
 
