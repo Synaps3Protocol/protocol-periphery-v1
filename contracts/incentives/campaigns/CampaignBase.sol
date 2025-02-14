@@ -164,7 +164,7 @@ abstract contract CampaignBase is
 
     /// @notice Adds funds to the campaign's balance.
     /// @param amount The amount of funds to add.
-    function addFunds(uint256 amount) external {
+    function addFunds(uint256 amount) external onlyOwner {
         require(amount > 0, "Invalid amount to allocate in campaign.");
         uint256 deposited = LEDGER_VAULT.collect(msg.sender, amount, MMC);
         _sumLedgerEntry(msg.sender, deposited, MMC);
@@ -173,7 +173,7 @@ abstract contract CampaignBase is
 
     /// @notice Removes funds from the campaign's balance.
     /// @param amount The amount of funds to remove.
-    function removeFunds(uint256 amount) external {
+    function removeFunds(uint256 amount) external onlyOwner {
         require(getLedgerBalance(msg.sender, MMC) >= amount, "Insufficient funds allocated in campaign.");
         uint256 confirmed = LEDGER_VAULT.transfer(msg.sender, amount, MMC);
         _subLedgerEntry(msg.sender, confirmed, MMC);

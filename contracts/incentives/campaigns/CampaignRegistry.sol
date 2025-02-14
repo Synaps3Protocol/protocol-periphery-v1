@@ -18,9 +18,9 @@ contract CampaignRegistry is Initializable, UUPSUpgradeable, AccessControlledUpg
     using ERC165Checker for address;
     using EnumerableSet for EnumerableSet.AddressSet;
 
+    uint256 private constant MIN_EXPIRE_AT = 1 hours;
     /// @dev The interface ID for ICampaign, used to verify that a campaign contract implements the correct interface.
     bytes4 private constant INTERFACE_CAMPAIGN = type(ICampaign).interfaceId;
-    uint256 private constant MIN_EXPIRE_AT = 1 hours;
     /// @dev Maps a campaign reference to its associated scope, which defines the entity the campaign operates on.
     mapping(bytes32 => address) private _scopes;
 
@@ -67,30 +67,29 @@ contract CampaignRegistry is Initializable, UUPSUpgradeable, AccessControlledUpg
     /// @return The address of the associated campaign if found, otherwise `address(0)`.
     function getCampaign(address account, address policy) external view returns (address) {
         // Compute the unique identifier for the campaign association
-        bytes32 scopeId = _computeComposedKey(account, policy);
-        return _scopes[scopeId]; // Return the campaign address if it exists, else return address(0)
+        return _scopes[_computeComposedKey(account, policy)];
     }
 
     /// @notice Creates and registers a new campaign by cloning a given template contract.
     /// @dev The provided template must be a valid campaign contract.
     /// @param template The address of the campaign contract to clone.
     /// @param policy The policy the campaign is linked to.
-    /// @param expireAt The timestamp when the campaign expires.
+    /// @param expiration The timestamp when the campaign expires.
     /// @param description A brief description of the campaign.
     /// @return The address of the newly created campaign.
     function createCampaign(
         address template,
         address policy,
-        uint256 expireAt,
+        uint256 expiration,
         string calldata description
     ) external onlyValidCampaigns(template) returns (address) {
         // minimum 1 hour to set as expire at
-        if (expireAt < MIN_EXPIRE_AT) {
+        if (expiration < MIN_EXPIRE_AT) {
             revert InvalidInput();
         }
 
-        bytes32 salt = keccak256(abi.encodePacked(msg.sender, template, expireAt));
-        address clone = template.cloneDeterministic(salt);
+        uint expireAt = block.timestamp + expiration;
+        address clone = _clone(template, expireAt);
         address campaign = _setup(clone, expireAt);
         // store "linked" owner + scope + campaign
         // this is useful during campaign retrieval from scope context
@@ -114,7 +113,6 @@ contract CampaignRegistry is Initializable, UUPSUpgradeable, AccessControlledUpg
         return campaign;
     }
 
-    /// @notice Associates a scope with a campaign.
     /// @dev Creates a unique identifier for the scope based on the owner's address
     ///      and the scope address. The generated scope ID is mapped to the campaign
     ///      in the `_scopes` mapping, allowing efficient retrieval.
@@ -126,6 +124,12 @@ contract CampaignRegistry is Initializable, UUPSUpgradeable, AccessControlledUpg
         bytes32 scopeId = _computeComposedKey(owner, policy);
         _scopes[scopeId] = campaign; // associate the scope ID with the campaign
         return scopeId;
+    }
+
+    /// @dev Deploy a new minimal-proxy (EIP-1167) based on the specified campaign template.
+    function _clone(address template, uint256 expireAt) private returns (address) {
+        bytes32 salt = keccak256(abi.encodePacked(msg.sender, template, expireAt));
+        return template.cloneDeterministic(salt);
     }
 
     /// @notice Computes a unique key by combining a scope and an account address.
