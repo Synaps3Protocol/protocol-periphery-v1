@@ -5,7 +5,7 @@ import { DeployBase } from "script/deployment/00_Deploy_Base.s.sol";
 import { PoliciesAgg } from "contracts/aggregation/PoliciesAgg.sol";
 
 contract DeployPoliciesAgg is DeployBase {
-    function run() external returns (address agreementPortal) {
+    function run() external returns (address) {
         vm.startBroadcast(getAdminPK());
 
         address accessManager = vm.envAddress("ACCESS_MANAGER");
@@ -14,10 +14,11 @@ contract DeployPoliciesAgg is DeployBase {
 
         address impl = address(new PoliciesAgg(rightsPolicyAuthorizer, assetOwnership));
         bytes memory init = abi.encodeCall(PoliciesAgg.initialize, (accessManager));
-        agreementPortal = deployUUPS(impl, init, "SALT_POLICIES_AGG");
+        address policiesAggregator = deployUUPS(impl, init, "SALT_POLICIES_AGG");
         vm.stopBroadcast();
 
-        _checkExpectedAddress(agreementPortal, "SALT_POLICIES_AGG");
-        _logAddress("POLICIES_AGG", agreementPortal);
+        _checkExpectedAddress(policiesAggregator, "SALT_POLICIES_AGG");
+        _logAddress("POLICIES_AGG", policiesAggregator);
+        return policiesAggregator;
     }
 }

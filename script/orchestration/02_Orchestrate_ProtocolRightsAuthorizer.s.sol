@@ -24,7 +24,7 @@ contract OrchestrateRightsAuthorizer is Script {
         T.Terms memory terms = IPolicy(subscriptionPolicy).resolveTerms(criteria);
         require(terms.amount == 1 * 1e18);
         require(terms.currency == mmc);
-        require(terms.rateBasis == T.RateBasis.DAILY);
+        require(terms.timeFrame == T.TimeFrame.DAILY);
         vm.stopBroadcast();
     }
 }

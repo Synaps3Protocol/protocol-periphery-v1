@@ -15,16 +15,16 @@ import { T } from "@synaps3/core/primitives/Types.sol";
 contract PoliciesAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradeable {
     using LoopOps for uint256;
 
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IRightsPolicyAuthorizer public immutable RIGHTS_POLICY_AUTHORIZER;
-    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
-    IAssetOwnership public immutable ASSET_OWNERSHIP;
-
     /// @notice structure to hold the relationship between policy and terms
     struct PolicyTerms {
         address policy;
         T.Terms terms;
     }
+
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    IRightsPolicyAuthorizer public immutable RIGHTS_POLICY_AUTHORIZER;
+    /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
+    IAssetOwnership public immutable ASSET_OWNERSHIP;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address rightsPolicyAuthorizer, address assetOwnership) {
@@ -68,7 +68,9 @@ contract PoliciesAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradea
         address[] memory policies = RIGHTS_POLICY_AUTHORIZER.getAuthorizedPolicies(holder);
         PolicyTerms[] memory terms = new PolicyTerms[](policies.length);
         uint256 availablePoliciesLen = policies.length;
+        uint256 j = 0;
 
+        // limited to available policies len
         for (uint256 i = 0; i < availablePoliciesLen; i = i.uncheckedInc()) {
             address policyAddress = policies[i]; // the address of the policy to fetch terms
             bytes memory callData = abi.encodeCall(IPolicy.resolveTerms, (criteria));
@@ -76,7 +78,14 @@ contract PoliciesAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradea
             if (!success) continue; // silent failure
 
             T.Terms memory term = abi.decode(result, (T.Terms));
-            terms[i] = PolicyTerms({ policy: policyAddress, terms: term });
+            terms[j] = PolicyTerms({ policy: policyAddress, terms: term });
+            // limited to available success policies terms based on criteria
+            j = j.uncheckedInc();
+        }
+
+        // truncate the terms
+        assembly {
+            mstore(terms, j)
         }
 
         return terms;

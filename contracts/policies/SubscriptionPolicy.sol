@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import { SubscriptionOps } from "contracts/libraries/SubscriptionOps.sol";
-import { BasePolicy } from "@synaps3/core/primitives/BasePolicy.sol";
+import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import { AccessControlledUpgradeable } from "@synaps3/core/primitives/upgradeable/AccessControlledUpgradeable.sol";
+import { PolicyOps } from "contracts/libraries/PolicyOps.sol";
+import { PolicyBase } from "@synaps3/policies/PolicyBase.sol";
 import { LoopOps } from "@synaps3/core/libraries/LoopOps.sol";
 import { T } from "@synaps3/core/primitives/Types.sol";
 
 /// @title SubscriptionPolicy
 /// @notice Implements a subscription-based content access policy.
-contract SubscriptionPolicy is BasePolicy {
+contract SubscriptionPolicy is Initializable, PolicyBase, UUPSUpgradeable, AccessControlledUpgradeable {
     using LoopOps for uint256;
-    using SubscriptionOps for uint256;
+    using PolicyOps for uint256;
 
     /// @dev Structure to define a subscription package.
     struct Package {
@@ -28,10 +31,21 @@ contract SubscriptionPolicy is BasePolicy {
     event SubscriptionEnforced(address indexed holder, uint256 pricePerDay, uint256 duration);
 
     constructor(
-        address rightPolicyManagerAddress,
-        address ownershipAddress,
-        address providerAddress
-    ) BasePolicy(rightPolicyManagerAddress, ownershipAddress, providerAddress) {}
+        address rightPolicyManager,
+        address rightsAuthorizer,
+        address assetOwnership,
+        address attestationProvider
+    ) PolicyBase(rightPolicyManager, rightsAuthorizer, assetOwnership, attestationProvider) {
+        /// https://forum.openzeppelin.com/t/uupsupgradeable-vulnerability-post-mortem/15680
+        /// https://forum.openzeppelin.com/t/what-does-disableinitializers-function-mean/28730/5
+        _disableInitializers();
+    }
+
+    /// @notice Initializes the proxy state.
+    function initialize(address accessManager) public initializer {
+        __UUPSUpgradeable_init();
+        __AccessControlled_init(accessManager);
+    }
 
     /// @notice Returns the name of the policy.
     function name() external pure returns (string memory) {
@@ -57,9 +71,9 @@ contract SubscriptionPolicy is BasePolicy {
     //  return hook.exec(criteria)
     //}
 
-    function initialize(address holder, bytes calldata init) external onlyPolicyAuthorizer initializer {
+    function setup(address holder, bytes calldata init) external onlyPolicyAuthorizer activate {
         (uint256 price, address currency) = abi.decode(init, (uint256, address));
-        if (price == 0) revert InvalidInitialization("Invalid subscription price.");
+        if (price == 0) revert InvalidSetup("Invalid subscription price.");
         // expected content subscription params..
         _packages[holder] = Package(price, currency);
     }
@@ -69,68 +83,37 @@ contract SubscriptionPolicy is BasePolicy {
     function enforce(
         address holder,
         T.Agreement calldata agreement
-    ) external onlyPolicyManager initialized returns (uint256[] memory) {
+    ) external onlyPolicyManager active returns (uint256[] memory) {
         Package memory pkg = _packages[holder];
-        if (pkg.pricePerDay == 0) {
-            // if the holder has not set the package details, can not process the agreement
-            revert InvalidEnforcement("Invalid not initialized holder conditions");
-        }
-
-        uint256 paidAmount = agreement.total;
-        uint256 partiesLen = agreement.parties.length;
-        uint256 pricePerDay = pkg.pricePerDay;
-
-        // verify if the paid amount is valid based on total expected + parties
-        (uint256 duration, uint256 totalToPay) = paidAmount.calcDuration(pricePerDay, partiesLen);
-        if (paidAmount < totalToPay) revert InvalidEnforcement("Insufficient funds for subscription");
-        // calculate the expected duration expire for subscription
-        uint256 subExpire = block.timestamp + (duration * 1 days);
+        uint256 duration = _calcExpectedDuration(pkg, agreement);
+        uint256 subExpire = _calculateSubscriptionExpiration(duration);
         uint256[] memory attestationIds = _commit(holder, agreement, subExpire);
+
         _updateBatchAttestation(holder, attestationIds, agreement.parties);
-        // Emit a single event with subscription details
-        emit SubscriptionEnforced(holder, pricePerDay, duration);
+        emit SubscriptionEnforced(holder, pkg.pricePerDay, duration);
         return attestationIds;
     }
 
     /// @notice Verifies if an account has access to holder's content or asset id.
     function isAccessAllowed(address account, bytes calldata criteria) external view returns (bool) {
         // Default behavior: only check attestation compliance for holder account.
-        if (_isHolderAddress(criteria)) {
-            // match the holder
-            address holder = abi.decode(criteria, (address));
-            return _isCompliant(account, holder);
-        }
-
+        address holder = _decodeCriteria(criteria);
         // a clear use case is check against the policy about the access to an asset id
         // validate access on asset id criteria on the subgroup of holder's content.
-        uint256 assetId = abi.decode(criteria, (uint256));
-        return _isCompliant(account, getHolder(assetId));
+        return _isCompliant(account, holder);
     }
 
     /// @notice Retrieves the terms associated with a specific criteria and policy.
     function resolveTerms(bytes calldata criteria) external view returns (T.Terms memory) {
-        // this policy only support holder address criteria
-        // the terms are handled in the holder's content's context
-        // cannot process individual asset id terms
-        if (!_isHolderAddress(criteria)) {
-            revert InvalidNotSupportedOperation();
-        }
-
-        address holder = abi.decode(criteria, (address));
+        address holder = _decodeCriteria(criteria);
         Package memory pkg = _packages[holder]; // the term set by the asset holder
-        return T.Terms(pkg.pricePerDay, pkg.currency, T.RateBasis.DAILY, "ipfs://");
+        return T.Terms(pkg.pricePerDay, pkg.currency, T.TimeFrame.DAILY, "ipfs://");
     }
 
-    /// @notice Verifies whether the on-chain access terms are satisfied for an account.
-    /// @dev The function checks if the provided account complies with the attestation.
-    /// @param account The address of the user whose access is being verified.
-    function _isCompliant(address account, address holder) public view returns (bool) {
-        bytes memory criteria = abi.encode(holder);
-        uint256 attestationId = getLicense(account, criteria);
-        // default uint256 attestation is zero <- means not registered
-        if (attestationId == 0) return false; // false if not registered
-        return ATTESTATION_PROVIDER.verify(attestationId, account);
-    }
+    /// @dev Authorizes the upgrade of the contract.
+    /// @notice Only the owner can authorize the upgrade.
+    /// @param newImplementation The address of the new implementation contract.
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 
     /// @notice Updates the attestation records for each account.
     /// @param attestationIds The ID of the attestations.
@@ -142,14 +125,36 @@ contract SubscriptionPolicy is BasePolicy {
     ) private {
         uint256 partiesLen = parties.length;
         for (uint256 i = 0; i < partiesLen; i = i.uncheckedInc()) {
-            bytes memory context = abi.encode(holder);
+            bytes memory context = abi.encode(holder); // the license context
             _setAttestation(parties[i], context, attestationIds[i]);
         }
     }
 
-    function _isHolderAddress(bytes calldata criteria) private pure returns (bool) {
+    /// @notice Decodes the criteria to extract the holder's address or resolve it from an asset ID.
+    /// @dev Checks if the criteria is an address; otherwise, assumes it's an asset ID and resolves the holder.
+    function _decodeCriteria(bytes calldata criteria) private view returns (address) {
         // we expect always two inputs eg: address or uint256
+        // if the criteria is an address we assume the holder address else an assetId
+        if (criteria.length != 32) revert InvalidNotSupportedOperation();
+        if (_isHolderAddress(criteria)) return abi.decode(criteria, (address));
+        uint256 assetId = abi.decode(criteria, (uint256));
+        return _getHolder(assetId);
+    }
 
+    /// @notice Verifies whether the on-chain access terms are satisfied for an account.
+    /// @dev The function checks if the provided account complies with the attestation.
+    /// @param account The address of the user whose access is being verified.
+    function _isCompliant(address account, address holder) private view returns (bool) {
+        bytes memory criteria = abi.encode(holder);
+        uint256 attestationId = getLicense(account, criteria);
+        // default uint256 attestation is zero <- means not registered
+        if (attestationId == 0) return false; // false if not registered
+        return ATTESTATION_PROVIDER.verify(attestationId, account);
+    }
+
+    /// @notice Detects whether the criteria represents a holder's address or an asset ID.
+    /// @dev Determines if the input bytes represent a 20-byte address by checking leading/trailing zeros.
+    function _isHolderAddress(bytes calldata criteria) private pure returns (bool) {
         // Detecting the "address shape" for the argument to handle polymorphic validation.
         // If the second argument has the structure of an address (20 bytes with 12 leading zero bytes),
         // it is treated as a `holder`. Otherwise, it is treated as an `assetId`.
@@ -158,9 +163,32 @@ contract SubscriptionPolicy is BasePolicy {
         // TODO: potential improvement:
         // https://github.com/ethereum/solidity/issues/10381
         // https://forum.soliditylang.org/t/call-for-feedback-the-future-of-try-catch-in-solidity/1497
-        if (criteria.length != 32) revert InvalidNotSupportedOperation();
         bool last20Valid = bytes20(criteria[12:32]) != bytes20(0);
         bool first12Valid = bytes12(criteria[0:12]) == bytes12(0);
         return last20Valid && first12Valid;
+    }
+
+    /// @notice Calculates the expected duration of a subscription based on the payment amount.
+    /// @dev Ensures the subscriber has paid enough for the required duration and number of parties.
+    /// @param package The subscription package of the holder.
+    /// @param agreement The agreement details.
+    function _calcExpectedDuration(
+        Package memory package,
+        T.Agreement calldata agreement
+    ) private pure returns (uint256) {
+        uint256 paidAmount = agreement.total;
+        uint256 partiesLen = agreement.parties.length;
+        uint256 pricePerDay = package.pricePerDay;
+
+        (uint256 duration, uint256 totalToPay) = paidAmount.calcDuration(pricePerDay, partiesLen);
+        if (paidAmount < totalToPay) revert InvalidEnforcement("Insufficient funds for subscription");
+        return duration;
+    }
+
+    /// @notice Calculates the expiration timestamp for the subscription.
+    /// @param duration The duration in days.
+    /// @return subExpire The calculated expiration timestamp.
+    function _calculateSubscriptionExpiration(uint256 duration) private view returns (uint256 subExpire) {
+        return block.timestamp + (duration * 1 days);
     }
 }

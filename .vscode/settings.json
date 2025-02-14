@@ -2,7 +2,9 @@
     "cSpell.words": [
         "IERC",
         "Initializable",
+        "keccak",
         "synaps",
         "UUPS"
-    ]
+    ],
+    "CodeGPT.apiKey": "CodeGPT Plus Beta"
 }
