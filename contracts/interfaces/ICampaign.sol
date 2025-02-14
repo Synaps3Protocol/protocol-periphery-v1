@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.26;
 
-import { T } from "@synaps3/core/primitives/Types.sol";
-
 /// @title ICampaign
 /// @notice Interface for managing campaigns, providing functionality for execution and retrieving campaign terms.
 /// @dev Defines the required functions for implementing campaign operations.

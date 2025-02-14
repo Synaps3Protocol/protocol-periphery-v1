@@ -3,6 +3,9 @@ pragma solidity 0.8.26;
 
 import { CampaignBase } from "contracts/incentives/campaigns/CampaignBase.sol";
 
+// TODO add exclusion or restrictions for specific content
+// eg. scope = rental, allow only = content2, content3 and content4
+
 /// @title SubscriptionCampaign
 /// @notice Abstract contract for managing subscription-based campaigns.
 contract SubscriptionCampaignTpl is CampaignBase {
