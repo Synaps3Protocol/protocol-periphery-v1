@@ -1,6 +1,6 @@
 @account-abstraction/=node_modules/@account-abstraction/
 @openzeppelin/=node_modules/@openzeppelin/
-@synaps3/=node_modules/@synaps3/types/contracts/
+@synaps3/=node_modules/@synaps3/protocol/contracts/
 @uniswap/=node_modules/@uniswap/
 base64-sol/=node_modules/base64-sol/
 forge-std/=lib/forge-std/src/

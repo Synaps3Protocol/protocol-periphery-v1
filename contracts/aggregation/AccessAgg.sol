@@ -32,6 +32,7 @@ contract AccessAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradeabl
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(address rightsPolicyManager) {
         _disableInitializers();
+        // right policy manager is in charge of all policies management
         RIGHTS_POLICY_MANAGER = IRightsPolicyManager(rightsPolicyManager);
     }
 
@@ -87,23 +88,32 @@ contract AccessAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradeabl
 
     /// @notice Retrieves active policies and their corresponding licenses for an account.
     /// @param account The address of the account to check.
-    /// @param criteria Encoded criteria used to filter active policies.
+    /// @param criteria Encoded criteria used to filter active policies. eg: assetId, holder, groups, etc
     function getActivePoliciesLicenses(
         address account,
         bytes memory criteria
     ) public view returns (PolicyLicense[] memory) {
+        // only the matched with valid criteria are returned...
         address[] memory policies = RIGHTS_POLICY_MANAGER.getActivePolicies(account, criteria);
         PolicyLicense[] memory licenses = new PolicyLicense[](policies.length);
         uint256 policiesLen = policies.length;
+        uint256 j = 0;
 
+        // limited to policies len
         for (uint256 i = 0; i < policiesLen; i = i.uncheckedInc()) {
-            address policyAddress = policies[i]; // address of the policy to fetch terms
             bytes memory callData = abi.encodeCall(IPolicy.getLicense, (account, criteria));
-            (, bytes memory result) = policyAddress.staticcall(callData); //
+            (bool success, bytes memory result) = policies[i].staticcall(callData); //
+            if (!success) continue; // silent error
 
             uint256 licenseId = abi.decode(result, (uint256));
-            if (licenseId == 0) continue; // 0 is not a license
-            licenses[i] = PolicyLicense({ policy: policyAddress, license: licenseId });
+            licenses[j] = PolicyLicense({ policy: policies[i], license: licenseId });
+            // limited to policies success 
+            j = j.uncheckedInc();
+        }
+
+        // truncate the licenses
+        assembly {
+            mstore(licenses, j)
         }
 
         return licenses;

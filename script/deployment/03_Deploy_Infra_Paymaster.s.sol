@@ -6,11 +6,12 @@ import { Paymaster } from "contracts/accounts/Paymaster.sol";
 import { Paymaster } from "contracts/accounts/Paymaster.sol";
 
 contract DeployPaymaster is DeployBase {
-    function run() external returns (address paymaster) {
+    function run() external returns (address) {
         vm.startBroadcast(getAdminPK());
         bytes memory bytecode = type(Paymaster).creationCode;
-        paymaster = deploy(bytecode, "SALT_PAYMASTER_ACCOUNT");
+        address paymaster = deploy(bytecode, "SALT_PAYMASTER_ACCOUNT");
         vm.stopBroadcast();
+        
         _logAddress("PAYMASTER", paymaster);
         return paymaster;
     }
