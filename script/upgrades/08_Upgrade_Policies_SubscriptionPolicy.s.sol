@@ -4,7 +4,7 @@ pragma solidity 0.8.26;
 import { UpgradeBase } from "script/upgrades/00_Upgrade_Base.s.sol";
 import { SubscriptionPolicy } from "contracts/policies/SubscriptionPolicy.sol";
 
-contract UpgradeTollgate is UpgradeBase {
+contract UpgradeSubscriptionPolicy is UpgradeBase {
     function run() external returns (address) {
         vm.startBroadcast(getAdminPK());
         address assetOwnership = vm.envAddress("ASSET_OWNERSHIP");

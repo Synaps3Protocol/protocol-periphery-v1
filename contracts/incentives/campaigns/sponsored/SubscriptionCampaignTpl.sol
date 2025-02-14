@@ -5,7 +5,7 @@ import { CampaignBase } from "contracts/incentives/campaigns/CampaignBase.sol";
 
 /// @title SubscriptionCampaign
 /// @notice Abstract contract for managing subscription-based campaigns.
- contract SubscriptionCampaign is CampaignBase {
+contract SubscriptionCampaignTpl is CampaignBase {
     /// @notice Initializes the contract by passing dependencies to `CampaignBase`.
     /// @dev This constructor is called when deploying a contract that extends `SubscriptionCampaign`.
     /// @param ledgerVault The address of the ledger vault contract handling fund operations.

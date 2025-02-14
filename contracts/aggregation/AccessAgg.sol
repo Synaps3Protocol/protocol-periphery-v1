@@ -107,7 +107,7 @@ contract AccessAgg is Initializable, UUPSUpgradeable, AccessControlledUpgradeabl
 
             uint256 licenseId = abi.decode(result, (uint256));
             licenses[j] = PolicyLicense({ policy: policies[i], license: licenseId });
-            // limited to policies success 
+            // limited to policies success
             j = j.uncheckedInc();
         }
 

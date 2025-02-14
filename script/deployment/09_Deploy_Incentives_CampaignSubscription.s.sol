@@ -2,7 +2,7 @@
 pragma solidity 0.8.26;
 
 import { DeployBase } from "script/deployment/00_Deploy_Base.s.sol";
-import { SubscriptionCampaign } from "contracts/incentives/campaigns/sponsored/SubscriptionCampaign.sol";
+import { SubscriptionCampaignTpl } from "contracts/incentives/campaigns/sponsored/SubscriptionCampaignTpl.sol";
 
 contract DeploySubscriptionCampaign is DeployBase {
     function run() external returns (address) {
@@ -11,7 +11,7 @@ contract DeploySubscriptionCampaign is DeployBase {
         address ledgerVault = vm.envAddress("LEDGER_VAULT");
         address assetOwnership = vm.envAddress("ASSET_OWNERSHIP");
 
-        bytes memory creationCode = type(SubscriptionCampaign).creationCode;
+        bytes memory creationCode = type(SubscriptionCampaignTpl).creationCode;
         bytes memory constructorArgs = abi.encode(ledgerVault, assetOwnership, mmc);
         bytes memory initCode = abi.encodePacked(creationCode, constructorArgs);
         address subscriptionCampaign = deploy(initCode, "SALT_CAMPAIGN_SUBSCRIPTION");

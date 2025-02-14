@@ -7,7 +7,6 @@ import { T } from "@synaps3/core/primitives/Types.sol";
 /// @notice Interface for managing campaigns, providing functionality for execution and retrieving campaign terms.
 /// @dev Defines the required functions for implementing campaign operations.
 interface ICampaign {
-
     /// @notice Executes a campaign run for the specified account.
     /// @dev This function triggers the core campaign logic, such as allocating funds or tracking access.
     /// Implementations may enforce additional restrictions based on campaign rules.

@@ -101,7 +101,7 @@ contract AccessWorkflow is BaseWorkflow {
         // run the campaign to get the funds for the registration
         ICampaign campaign_ = ICampaign(campaign);
         uint256 reserved = campaign_.run(msg.sender);
-        
+
         // reserve funds to workflow and register agreement
         uint256 confirmed = LEDGER_VAULT.collect(campaign, reserved, MMC);
         emit SponsoredAccess(campaign, holder, policy, confirmed, parties);
