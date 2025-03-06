@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
 import { DeployBase } from "script/deployment/00_Deploy_Base.s.sol";
@@ -18,7 +18,7 @@ contract DeployCampaignSubscriptionTpl is DeployBase {
         vm.stopBroadcast();
 
         _checkExpectedAddress(subscriptionCampaign, "SALT_CAMPAIGN_SUBSCRIPTION_TPL");
-        _logAddress("CAMPAIGN_SUBSCRIPTION", subscriptionCampaign);
+        _logAddress("CAMPAIGN_SUBSCRIPTION_TPL", subscriptionCampaign);
         return subscriptionCampaign;
     }
 }

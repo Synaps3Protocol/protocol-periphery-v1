@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
 import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
@@ -27,8 +27,9 @@ contract CampaignRegistry is Initializable, UUPSUpgradeable, AccessControlledUpg
     /// @notice Event emitted when a new campaign is registered.
     event CampaignRegistered(
         address indexed owner,
-        address indexed campaign,
+        address indexed policy,
         uint256 indexed expireAt,
+        address campaign,
         bytes32 scopeId,
         string description
     );
@@ -94,7 +95,7 @@ contract CampaignRegistry is Initializable, UUPSUpgradeable, AccessControlledUpg
         // store "linked" owner + scope + campaign
         // this is useful during campaign retrieval from scope context
         bytes32 scopeId = _addScopeAssoc(msg.sender, policy, campaign);
-        emit CampaignRegistered(msg.sender, campaign, expireAt, scopeId, description);
+        emit CampaignRegistered(msg.sender, policy, expireAt, campaign, scopeId, description);
         return campaign;
     }
 

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
 /// @title ICampaign
@@ -12,9 +12,8 @@ interface ICampaign {
     /// @return allocatedAmount The amount of funds allocated for the campaign run.
     function run(address account) external returns (uint256 allocatedAmount);
 
-    /// @notice Checks whether a given operator is active within the campaign.
-    /// @dev This function verifies if the specified address has permissions to operate in the campaign.
-    /// @param operator The address of the entity being checked.
-    /// @return isActiveStatus A boolean indicating whether the operator is active (`true`) or inactive (`false`).
-    function isActive(address operator) external view returns (bool isActiveStatus);
+    /// @notice Determines if the campaign is active or eligible for a given operator and account.
+    /// @param operator The operator controlling the campaign.
+    /// @param account The account to check usage state.
+    function isActive(address operator, address account) external view returns (bool isActiveStatus);
 }
