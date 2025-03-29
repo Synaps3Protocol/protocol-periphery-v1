@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
-import { ERC165 } from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import { LedgerUpgradeable } from "@synaps3/core/primitives/upgradeable/LedgerUpgradeable.sol";
+import { UUPSUpgradeable } from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import { OwnableUpgradeable } from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import { PausableUpgradeable } from "@openzeppelin/contracts-upgradeable/utils/PausableUpgradeable.sol";
+import { ERC165Upgradeable } from "@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol";
 
 import { ILedgerVault } from "@synaps3/core/interfaces/financial/ILedgerVault.sol";
 import { IAssetOwnership } from "@synaps3/core/interfaces/assets/IAssetOwnership.sol";
@@ -15,7 +16,7 @@ import { ICampaign } from "contracts/interfaces/ICampaign.sol";
 /// @notice Abstract contract for managing sponsored campaigns with funds allocation and access control.
 abstract contract CampaignBase is
     Initializable,
-    ERC165,
+    ERC165Upgradeable,
     LedgerUpgradeable,
     PausableUpgradeable,
     OwnableUpgradeable,
@@ -95,6 +96,7 @@ abstract contract CampaignBase is
     /// @param owner Address that owns the campaign.
     /// @param expireAt Timestamp offset for campaign expiration.
     function initialize(address owner, uint256 expireAt) public initializer {
+        __ERC165_init();
         __Ledger_init();
         __Pausable_init();
         __Ownable_init(owner);
@@ -189,16 +191,10 @@ abstract contract CampaignBase is
     /// @param account The account receiving sponsored access.
     /// @return The amount of allocated funds used during the run.
     function run(address account) external returns (uint256) {
-        uint256 maxQuotaLimit = _getQuotaLimit();
-        uint256 availableFunds = getFundsBalance();
+        require(isActive(msg.sender, account), "Invalid inactive campaign.");
         uint256 allocatedAmount = _getAllocation(msg.sender);
         uint256 quotaCounter = _getQuotaCounter(account);
-        // 1- Ensure a valid allocation for this operator.
-        // 2- Ensure enough funds remain in the campaign.
-        // 3- Ensure the account hasn't exceeded its usage limit.
-        require(allocatedAmount > 0, "No funds allocated for this campaign.");
-        require(availableFunds >= allocatedAmount, "No funds to sponsor access in campaign.");
-        require(maxQuotaLimit > quotaCounter, "Exceeded max sponsored access in campaign.");
+
         // Increment usage counters and deduct allocated funds.
         _setQuotaCounter(account, quotaCounter + 1);
         _subLedgerEntry(owner(), allocatedAmount, MMC);
@@ -234,9 +230,10 @@ abstract contract CampaignBase is
     function isActive(address operator, address account) public view virtual returns (bool) {
         bool withValidSetup = isReady(operator);
         bool isExpired = _getExpirationTime() < block.timestamp;
-        bool quotaLimitExceeded = _getQuotaCounter(account) > _getQuotaLimit();
+        bool quotaLimitExceeded = _getQuotaCounter(account) >= _getQuotaLimit();
+        bool fundsLimitExceeded = getFundsBalance() < _getAllocation(operator);
         // Campaign is active if setup is valid, not expired, not paused, and quota not exceeded.
-        return withValidSetup && !isExpired && !paused() && !quotaLimitExceeded;
+        return withValidSetup && !isExpired && !paused() && !quotaLimitExceeded && !fundsLimitExceeded;
     }
 
     /// @notice Retrieves the owner of a given asset from the asset ownership contract.
