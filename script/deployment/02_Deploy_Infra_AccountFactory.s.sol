@@ -2,7 +2,7 @@
 pragma solidity 0.8.26;
 
 import { DeployBase } from "script/deployment/00_Deploy_Base.s.sol";
-import { SmartAccounts } from "contracts/accounts/SmartAccounts.sol";
+import { SmartAccount } from "contracts/accounts/SmartAccount.sol";
 import { ERC4337Factory } from "solady/accounts/ERC4337Factory.sol";
 
 contract DeployAccountFactory is DeployBase {

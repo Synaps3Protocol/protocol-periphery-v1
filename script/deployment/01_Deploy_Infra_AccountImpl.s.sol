@@ -2,12 +2,12 @@
 pragma solidity 0.8.26;
 
 import { DeployBase } from "script/deployment/00_Deploy_Base.s.sol";
-import { SmartAccounts } from "contracts/accounts/SmartAccounts.sol";
+import { SmartAccount } from "contracts/accounts/SmartAccount.sol";
 
 contract DeployAccountImpl is DeployBase {
     function run() external returns (address) {
         vm.startBroadcast(getAdminPK());
-        bytes memory bytecode = type(SmartAccounts).creationCode;
+        bytes memory bytecode = type(SmartAccount).creationCode;
         address impl = deploy(bytecode, "SALT_ACCOUNT_IMPL");
         vm.stopBroadcast();
         

@@ -7,7 +7,7 @@ import { ERC4337 } from "solady/accounts/ERC4337.sol";
 /// @dev This contract extends the ERC4337 implementation to provide specific behavior for
 ///      signature verification and domain information for EIP-712 compatibility.
 /// https://eips.ethereum.org/EIPS/eip-4337
-contract SmartAccounts is ERC4337 {
+contract SmartAccount is ERC4337 {
     /// @notice Returns the address used to verify ERC1271 signatures.
     /// @dev Overrides the `_erc1271Signer` function from the ERC1271 contract.
     ///      This implementation uses the owner of the account as the signer.
