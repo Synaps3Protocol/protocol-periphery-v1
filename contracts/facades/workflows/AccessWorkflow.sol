@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
 import { FinancialOps } from "@synaps3/core/libraries/FinancialOps.sol";
@@ -12,24 +12,15 @@ contract AccessWorkflow is BaseWorkflow {
     using FinancialOps for address;
 
     /// @notice Emitted when a policy agreement workflow is successfully completed.
-    /// @param holder The address of the rights holder.
-    /// @param policyAddress The address of the registered policy.
-    /// @param proof The unique identifier of the agreement.
-    event AccessAgreementCreated(address indexed holder, address indexed policyAddress, uint256 proof);
-
-    /// @notice Emitted when a sponsored access is registered.
-    /// @param campaign The campaign identifier.
+    /// @param account The account registering access agreement.
     /// @param holder The address of the holder sponsoring the access.
-    /// @param policyAddress The policy address being sponsored.
-    /// @param reservedAmount The amount of funds reserved for the access.
-    /// @param parties The list of parties involved in the access.
-    event SponsoredAccess(
-        address indexed campaign,
-        address indexed holder,
-        address indexed policyAddress,
-        uint256 reservedAmount,
-        address[] parties
-    );
+    /// @param policy The policy address being sponsored.
+    event AccessAgreementCreated(address indexed account, address indexed holder, address indexed policy);
+    /// @notice Emitted when a sponsored access is registered.
+    /// @param campaign The sponsor campaign address.
+    /// @param holder The address of the holder sponsoring the access.
+    /// @param policy The policy address being sponsored.
+    event SponsoredAccessCreated(address indexed campaign, address indexed holder, address indexed policy);
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(
@@ -55,27 +46,22 @@ contract AccessWorkflow is BaseWorkflow {
     /// @param policy The address of the policy contract governing the agreement.
     /// @param parties An array of addresses representing the participants involved in the agreement.
     /// @param payload Additional data required to create the agreement.
-    /// @return An array of license IDs registered under the agreement.
     function registerAccessAgreement(
         uint256 amount,
         address holder,
         address policy,
         address[] calldata parties,
         bytes calldata payload
-    ) public returns (uint256[] memory) {
+    ) external {
         require(amount > 0, "Amount cannot be zero");
         require(policy != address(0), "Policy address cannot be zero");
         require(parties.length > 0, "Parties cannot be empty");
 
-        address broker = address(RIGHTS_POLICY_MANAGER);
-        // 1- collect reserved fund and make them available for the contract
-        // 2- create immediately the agreement with the funds reserved
-        // 3- register the policy using the agreement proof
-        uint256 confirmed = LEDGER_VAULT.collect(msg.sender, amount, MMC);
-        uint256 proof = AGREEMENT_MANAGER.createAgreement(confirmed, MMC, broker, parties, payload);
-        uint256[] memory attestations = RIGHTS_POLICY_MANAGER.registerPolicy(proof, holder, policy);
-        emit AccessAgreementCreated(holder, policy, proof);
-        return attestations;
+        // Step 1: Collect and reserve MMC tokens from the sender.
+        // Step 2: Create the agreement immediately using the reserved tokens.
+        // Step 3: Register the policy using the generated agreement proof.
+        _registerAccessAgreement(amount, msg.sender, holder, policy, parties, payload);
+        emit AccessAgreementCreated(msg.sender, holder, policy);
     }
 
     //// @notice Handles sponsored access based on campaigns.
@@ -88,24 +74,41 @@ contract AccessWorkflow is BaseWorkflow {
     /// @param policy The address of the policy contract applied to the sponsored access.
     /// @param parties An array of addresses representing the participants in the sponsored agreement.
     /// @param payload Additional data required for the agreement registration.
-    /// @return An array of IDs representing the licenses registered for the sponsored agreement.
     function sponsoredAccessAgreement(
         address holder,
         address campaign, // eg. campaign registry
         address policy, // eg. subscription
         address[] calldata parties,
         bytes calldata payload
-    ) public returns (uint256[] memory) {
+    ) external {
         require(policy != address(0), "Policy address cannot be zero");
         require(campaign != address(0), "Campaign address cannot be zero");
-        // run the campaign to get the funds for the registration
-        ICampaign campaign_ = ICampaign(campaign);
-        uint256 reserved = campaign_.run(msg.sender);
+        // Step 1: Run the campaign contract to determine available sponsorship funds.
+        // Step 2: Reserve the collected funds and register the sponsored agreement.
+        uint256 sponsoredAmount = ICampaign(campaign).run(msg.sender);
+        _registerAccessAgreement(sponsoredAmount, campaign, holder, policy, parties, payload);
+        emit SponsoredAccessCreated(campaign, holder, policy);
+    }
 
-        // reserve funds to workflow and register agreement
-        uint256 confirmed = LEDGER_VAULT.collect(campaign, reserved, MMC);
-        emit SponsoredAccess(campaign, holder, policy, confirmed, parties);
-        return registerAccessAgreement(reserved, holder, policy, parties, payload);
+    /// @dev Internal function to register an access agreement.
+    /// @param amount Amount of MMC tokens reserved for the agreement.
+    /// @param initiator Address that initiates the agreement registration.
+    /// @param holder Rights holder who will have access.
+    /// @param policy Policy contract that governs access rules.
+    /// @param parties List of participants involved in the agreement.
+    /// @param payload Additional metadata required to create the agreement.
+    function _registerAccessAgreement(
+        uint256 amount,
+        address initiator,
+        address holder,
+        address policy,
+        address[] calldata parties,
+        bytes calldata payload
+    ) private returns (uint256[] memory) {
+        address broker = address(RIGHTS_POLICY_MANAGER);
+        uint256 confirmed = LEDGER_VAULT.collect(initiator, amount, MMC);
+        uint256 proof = AGREEMENT_MANAGER.createAgreement(confirmed, MMC, broker, parties, payload);
+        return RIGHTS_POLICY_MANAGER.registerPolicy(proof, holder, policy);
     }
 
     /// @notice Function that should revert when msg.sender is not authorized to upgrade the contract.

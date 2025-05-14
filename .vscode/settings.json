@@ -4,7 +4,8 @@
         "Initializable",
         "keccak",
         "synaps",
-        "UUPS"
+        "UUPS",
+        "veryfing"
     ],
     "CodeGPT.apiKey": "CodeGPT Plus Beta"
 }

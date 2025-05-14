@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
 import { CampaignBase } from "contracts/incentives/campaigns/CampaignBase.sol";
@@ -6,9 +6,9 @@ import { CampaignBase } from "contracts/incentives/campaigns/CampaignBase.sol";
 // TODO add exclusion or restrictions for specific content
 // eg. scope = rental, allow only = content2, content3 and content4
 
-/// @title SubscriptionCampaign
+/// @title CampaignSubscription
 /// @notice Abstract contract for managing subscription-based campaigns.
-contract SubscriptionCampaignTpl is CampaignBase {
+contract CampaignSubscriptionTpl is CampaignBase {
     /// @notice Initializes the contract by passing dependencies to `CampaignBase`.
     /// @dev This constructor is called when deploying a contract that extends `SubscriptionCampaign`.
     /// @param ledgerVault The address of the ledger vault contract handling fund operations.

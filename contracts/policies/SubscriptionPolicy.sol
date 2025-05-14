@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: BUSL-1.1
 pragma solidity 0.8.26;
 
 import { Initializable } from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -62,7 +62,7 @@ contract SubscriptionPolicy is Initializable, PolicyBase, UUPSUpgradeable, Acces
             "2) Instant access to all content during the subscription period.";
     }
 
-    // TODOpotential improvement to scaling custom actions in protocol using hooks
+    // TODO potential improvement to scaling custom actions in protocol using hooks
     // eg: access handling for gating content. etc.. dynamic prices: discounts, etc IPricesHook
     // function isAccessAllowed(bytes calldata criteria) external view return (bool) {
     //  // get registered access hooks for this contract
@@ -71,7 +71,7 @@ contract SubscriptionPolicy is Initializable, PolicyBase, UUPSUpgradeable, Acces
     //  return hook.exec(criteria)
     //}
 
-    function setup(address holder, bytes calldata init) external onlyPolicyAuthorizer activate {
+    function setup(address holder, bytes calldata init) external onlyPolicyAuthorizer {
         (uint256 price, address currency) = abi.decode(init, (uint256, address));
         if (price == 0) revert InvalidSetup("Invalid subscription price.");
         // expected content subscription params..
@@ -83,7 +83,7 @@ contract SubscriptionPolicy is Initializable, PolicyBase, UUPSUpgradeable, Acces
     function enforce(
         address holder,
         T.Agreement calldata agreement
-    ) external onlyPolicyManager active returns (uint256[] memory) {
+    ) external onlyPolicyManager returns (uint256[] memory) {
         Package memory pkg = _packages[holder];
         uint256 duration = _calcExpectedDuration(pkg, agreement);
         uint256 subExpire = _calculateSubscriptionExpiration(duration);
