@@ -17,7 +17,6 @@ Core Protocol
 Peripheral
   ├── Hook Manager (central registry)
   ├── Custom Hooks (e.g., IAccessHook, IHookSplit)
-  └── Extensions (e.g., Advanced Gating, Benefit Splitting)
 ```
 
 
